@@ -60,16 +60,7 @@ embeddings_model = HuggingFaceEmbeddings(model_name=os.getenv("EMBEDDING_MODEL_N
 
 
 def add_knowledge(text):
-    '''
-    Explanation:
-        Text Splitting: The input text is split into chunks using RecursiveCharacterTextSplitter,
-        ensuring that each chunk is small enough to process efficiently.
-        LLMGraphTransformer: The LLM transforms the chunks into a format that can be stored in a Neo4j graph.
-        Adding to Graph: The transformed documents are added to the graph as nodes with relationships.
-    Parameters:
-        text: The content of the uploaded text file.
-        Returns: None. Adds documents to the graph database.
-    '''
+    
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=CHUNK_SIZE,
         chunk_overlap=CHUNK_OVERLAP,
@@ -80,12 +71,7 @@ def add_knowledge(text):
     graph.add_graph_documents(graph_documents, baseEntityLabel=True, include_source=True)
 
 # Vector Index
-'''
-Explanation:
-Vector Indexing: Creates an index for the graph that allows for hybrid searches
-(combining both full-text and vector-based searches). The embeddings generated
-using Hugging Face are stored in the Neo4j database, and later used for similarity-based queries.
-'''
+
 vector_index = Neo4jVector.from_existing_graph(
     embeddings_model,
     url=url,
@@ -116,29 +102,13 @@ entity_chain = entity_prompt | llm.with_structured_output(Entities)
 
 # Function to generate fulltext query
 def generate_full_text_query(input: str) -> str:
-    '''
-    Explanation:
-        This function generates a full-text query string that can be used with Neo4j's
-        full-text search API. The query uses a fuzzy search (~2 allows for slight 
-        variations in word spelling).
-    Parameters:
-        input: A raw query string.
-        Returns: A formatted full-text query string.
-    '''
+   
     words = remove_lucene_chars(input).split()
     return " AND ".join([f"{word}~2" for word in words])
 
 # Structured retriever
 def structured_retriever(question: str) -> str:
-    '''
-    Explanation:
-        Entity Extraction: The LLM extracts entities from the input question.
-    Full-text Search: 
-        A query is executed to find graph nodes related to the 
-        extracted entities, and relationships (e.g., MENTIONS) are used to retrieve related nodes.
-    Result Formatting: 
-        Outputs structured information (nodes and relationships) in a readable format.
-    '''
+    
     result = ""
     entities = entity_chain.invoke({"question": question})
     for entity in entities.names:
@@ -163,12 +133,7 @@ def structured_retriever(question: str) -> str:
 
 # Full retriever function
 def retriever(question: str) -> str:
-    '''
-    Explanation:
-        Structured Data: The structured_retriever function retrieves data from the graph based on entities found in the question.
-        Unstructured Data: A similarity search is performed over the vector index for unstructured document matching.
-        Final Result: The results of both the structured and unstructured searches are combined and returned.
-    '''
+   
     structured_data = structured_retriever(question)
     unstructured_data = "\n".join([el.page_content for el in vector_index.similarity_search(question)])
     return f"Structured data:\n{structured_data}\n\nUnstructured data:\n{unstructured_data}"
