@@ -1,0 +1,8 @@
+langchain
+langchain_google_genai
+langchain_community
+langchain_text_splitters
+langchain_chroma
+streamlit
+PyPDF2
+sentence-transformers
